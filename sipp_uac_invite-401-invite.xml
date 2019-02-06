@@ -46,40 +46,56 @@
         </action>
     </nop>
 
+    <pause min="1" max="5000"/>
+
     <!-- Send the first INVITE (with no SDP, it will be rejected anyway) -->
     <send retrans="500">
         <![CDATA[
     
-          INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+          INVITE sip:[service]@[field1]:[remote_port] SIP/2.0
           Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-          From: "[field0]" <sip:[field0]@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
-          To: "[service]" <sip:[service]@[remote_ip]:[remote_port]>
+          From: "[field0]" <sip:[field0]@[field1]>;tag=[pid]SIPpTag00[call_number]
+          To: "[service]" <sip:[service]@[field1]:[remote_port]>
           Call-ID: [call_id]
           CSeq: [cseq] INVITE
-          Contact: sip:[field0]@[local_ip]:[local_port]
+          Contact: <sip:[field0]@[local_ip]:[local_port];transport=[transport]>
           Max-Forwards: 70
           Subject: Performance Test
           Content-Type: application/sdp
-          Content-Length: 0
+          Content-Length: [len]
+    
+          v=0
+          s=Performance Test Stream [call_number]
+          o=[field0] [$secs_int] [$usecs_int] IN IP[local_ip_type] [local_ip]
+          c=IN IP[media_ip_type] [media_ip]
+          t=0 0
+          m=audio [media_port] RTP/AVP 8
+          a=rtpmap:8 PCMA/8000
+          a=sendrecv
+          a=ptime:20
     
         ]]>
     </send>
 
+    <!-- We may get "Trying" -->
+    <recv response="100" optional="true"  timeout="100000">
+    </recv>
+    
     <!-- We should receive "401 Unauthorized" -->
-    <recv response="401" auth="true">
+    <recv response="407" auth="true">
     </recv>
     
     <!-- Send ACK back -->
     <send>
         <![CDATA[
     
-          ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+          ACK sip:[service]@[field1]:[remote_port] SIP/2.0
           Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-          From: "[field0]" <sip:[field0]@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
-          To: "[service]" <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+          From: "[field0]" <sip:[field0]@[field1]>;tag=[pid]SIPpTag00[call_number]
+          To: "[service]" <sip:[service]@[field1]:[remote_port]>[peer_tag_param]
           Call-ID: [call_id]
           CSeq: [cseq] ACK
-          Contact: sip:[field0]@[local_ip]:[local_port]
+          Contact: sip:[field0]@[local_ip]:[local_port];transport=[transport]
           Max-Forwards: 70
           Subject: Performance Test
           Content-Length: 0
@@ -91,13 +107,13 @@
     <send retrans="500">
         <![CDATA[
     
-          INVITE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+          INVITE sip:[service]@[field1]:[remote_port] SIP/2.0
           Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-          From: "[field0]" <sip:[field0]@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
-          To: "[service]" <sip:[service]@[remote_ip]:[remote_port]>
+          From: "[field0]" <sip:[field0]@[field1]>;tag=[pid]SIPpTag00[call_number]
+          To: "[service]" <sip:[service]@[field1]:[remote_port]>
           Call-ID: [call_id]
           CSeq: [cseq] INVITE
-          Contact: sip:[field0]@[local_ip]:[local_port]
+          Contact: sip:[field0]@[local_ip]:[local_port];transport=[transport]
           [field2]
           Max-Forwards: 70
           Subject: Performance Test
@@ -109,10 +125,10 @@
           o=[field0] [$secs_int] [$usecs_int] IN IP[local_ip_type] [local_ip]
           c=IN IP[media_ip_type] [media_ip]
           t=0 0
-          m=audio [media_port] RTP/AVP 0
-          a=rtpmap:0 PCMU/8000
+          m=audio [media_port] RTP/AVP 8
+          a=rtpmap:8 PCMA/8000
           a=sendrecv
-          a=ptime:40
+          a=ptime:20
     
         ]]>
     </send>
@@ -126,20 +142,24 @@
     </recv>
     
     <!-- We should get "OK" -->
-    <recv response="200">
+    <recv response="200" rrs="true" td="true">
+        <action>
+            <ereg regexp="sip:[^&gt;]+" search_in="hdr" header="Contact:" check_it="true" assign_to="ct_hdr" />
+        </action>
     </recv>
     
     <!-- Send ACK back -->
     <send>
         <![CDATA[
     
-          ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+          ACK [$ct_hdr] SIP/2.0
+          [routes]
           Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-          From: "[field0]" <sip:[field0]@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
-          To: "[service]" <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+          From: "[field0]" <sip:[field0]@[field1]:[local_port]>;tag=[pid]SIPpTag00[call_number]
+          To: "[service]" <sip:[service]@[field1]:[remote_port]>[peer_tag_param]
           Call-ID: [call_id]
           CSeq: [cseq] ACK
-          Contact: sip:[field0]@[local_ip]:[local_port]
+          Contact: sip:[field0]@[local_ip]:[local_port];transport=[transport]
           Max-Forwards: 70
           Subject: Performance Test
           Content-Length: 0
@@ -147,20 +167,27 @@
         ]]>
     </send>
     
+    <!-- Play a pre-recorded PCAP file (RTP stream)                       -->
+    <nop>
+      <action>
+        <exec play_pcap_audio="silence-pcma.pcap"/>
+      </action>
+    </nop>
     <!-- This "pause" can be adusted with -d <milliseconds> in command line -->
-    <pause/>
+    <pause milliseconds="300000"/>
     
     <!-- Send goodBYE -->
     <send retrans="500">
         <![CDATA[
     
-          BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+          BYE [$ct_hdr] SIP/2.0
+          [routes]
           Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
-          From: "[field0]" <sip:[field0]@[local_ip]:[local_port]>;tag=[pid]SIPpTag00[call_number]
-          To: "[service]" <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+          From: "[field0]" <sip:[field0]@[field1]:[local_port]>;tag=[pid]SIPpTag00[call_number]
+          To: "[service]" <sip:[service]@[field1]:[remote_port]>[peer_tag_param]
           Call-ID: [call_id]
           CSeq: [cseq] BYE
-          Contact: sip:[field0]@[local_ip]:[local_port]
+          Contact: sip:[field0]@[local_ip]:[local_port];transport=[transport]
           Max-Forwards: 70
           Subject: Performance Test
           Content-Length: 0
