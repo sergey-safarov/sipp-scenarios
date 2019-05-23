@@ -1,0 +1,21 @@
+<include>
+  <context name="public">
+
+    <extension name="check_pin" continue="true">
+      <condition field="${sip_h_X-PIN}" expression="^[0-9#*]+$">
+        <action application="log" data="INFO Received DTMF code ${sip_h_X-PIN}"/>
+        <action application="set" data="execute_on_answer_1=sleep 5000" />
+        <action application="set" data="execute_on_answer_2=send_dtmf ${sip_h_X-PIN}" />
+      </condition>
+    </extension>
+
+    <extension name="answer_call">
+      <condition>
+        <action application="answer"/>
+        <action application="playback" data="silence_stream://-1"/>
+      </condition>
+    </extension>
+
+  </context>
+</include>
+

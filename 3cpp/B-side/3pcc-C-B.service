@@ -1,0 +1,26 @@
+[Unit]
+Description=SIPP 3pcc-C-B process
+After=network-online.target
+AssertPathExists=/etc/sipp/3pcc-C-B.xml
+
+[Service]
+Type=forking
+Restart=always
+TimeoutStartSec=0
+SuccessExitStatus=99
+Environment=IP=127.0.0.1
+EnvironmentFile=-/etc/sipp/env
+WorkingDirectory=/opt/freeswitch
+ExecStartPre=/bin/ln -fs /etc/sipp/3pcc-C-B.xml /opt/freeswitch/3pcc-C-B.xml
+ExecStart=/bin/sipp -bg \
+                    -p 15082 \
+                    -sf 3pcc-C-B.xml \
+                    -3pcc localhost:8888 \
+                    -trace_err \
+                    -trace_screen \
+                    -i ${IP} \
+                    ${IP}:15080
+
+[Install]
+WantedBy=multi-user.target
+

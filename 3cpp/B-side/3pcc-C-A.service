@@ -1,0 +1,31 @@
+[Unit]
+Description=SIPP 3pcc-C-A process
+After=network-online.target 3pcc-C-B.service
+Requires=3pcc-C-B.service
+Wants=3pcc-C-B.service
+AssertPathExists=/etc/sipp/3pcc-C-A.xml
+AssertPathExists=/etc/sipp/data.csv
+
+[Service]
+Type=forking
+Restart=always
+TimeoutStartSec=0
+SuccessExitStatus=99
+Environment=IP=127.0.0.1
+Environment=PORT=5060
+EnvironmentFile=-/etc/sipp/env
+WorkingDirectory=/opt/freeswitch
+ExecStartPre=/bin/ln -fs /etc/sipp/3pcc-C-A.xml /opt/freeswitch/3pcc-C-A.xml
+ExecStart=/bin/sipp -bg \
+                    -p ${PORT} \
+                    -sf 3pcc-C-A.xml \
+                    -inf /etc/sipp/data.csv \
+                    -infindex data.csv 0 \
+                    -3pcc localhost:8888 \
+                    -trace_err \
+                    -trace_screen \
+                    -i ${IP}
+
+[Install]
+WantedBy=multi-user.target
+

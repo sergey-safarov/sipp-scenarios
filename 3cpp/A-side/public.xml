@@ -1,0 +1,12 @@
+<include>
+  <context name="public">
+
+    <extension name="answer_call">
+      <condition>
+        <action application="set" data="foo=${lua(check_pin.lua)}"/>
+      </condition>
+    </extension>
+
+  </context>
+</include>
+
